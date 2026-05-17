@@ -4,8 +4,7 @@ MediClass AI — Complete Flask Application
 Medical Specialty Classifier
 Roles: Admin, Doctor, Patient
 Database: SQLite
-OCR: Tesseract (PNG/JPG support)
-Text Enhancer: Converts casual to clinical
+OCR: Tesseract (Windows + Linux)
 """
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
@@ -14,7 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime
-import os, json, torch
+import os, json, torch, platform
 import torch.nn.functional as F
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
@@ -56,7 +55,7 @@ SPECIALTY_ICONS = {
     "General Medicine": "🏥"
 }
 
-# ── Symptom Keywords for Enhancement ────────────────────────
+# ── Symptom Keywords ─────────────────────────────────────────
 SPECIALTY_KEYWORDS = {
     "General Medicine": [
         "fever", "cold", "flu", "cough", "headache", "fatigue",
@@ -136,11 +135,10 @@ def load_model():
         classifier_model.eval()
         print("✅ Model loaded successfully!")
     else:
-        print(f"⚠️  Model not found — running in demo mode")
+        print("⚠️  Model not found — running in demo mode")
 
 # ── Text Enhancer ────────────────────────────────────────────
 def detect_specialty_from_keywords(text):
-    """Detect most likely specialty from keywords"""
     text_lower = text.lower()
     scores     = {}
     for specialty, keywords in SPECIALTY_KEYWORDS.items():
@@ -152,89 +150,32 @@ def detect_specialty_from_keywords(text):
     return None
 
 def enhance_text(text):
-    """
-    Convert casual patient language to clinical text
-    so BioBERT can classify accurately
-    """
-    words = text.split()
-
-    # If text is long enough — no enhancement needed
+    words    = text.split()
     if len(words) >= 20:
         return text
-
-    # Detect specialty from keywords
     detected = detect_specialty_from_keywords(text)
-
-    # Build enhanced clinical text
-    if detected == "General Medicine":
-        enhanced = (
-            f"Patient presents with general medical complaints including {text}. "
-            f"Symptoms suggest primary care consultation. "
-            f"Clinical assessment for common illness, fever, infection, or viral condition. "
-            f"General medicine outpatient evaluation recommended."
-        )
-    elif detected == "Cardiology":
-        enhanced = (
-            f"Patient presents with cardiovascular symptoms: {text}. "
-            f"Cardiac evaluation recommended including ECG and blood pressure monitoring."
-        )
-    elif detected == "Neurology":
-        enhanced = (
-            f"Patient presents with neurological symptoms: {text}. "
-            f"Neurological assessment and evaluation of brain and nervous system recommended."
-        )
-    elif detected == "Orthopedics":
-        enhanced = (
-            f"Patient presents with musculoskeletal complaints: {text}. "
-            f"Orthopedic evaluation of bones, joints and muscles recommended."
-        )
-    elif detected == "Dermatology":
-        enhanced = (
-            f"Patient presents with skin-related symptoms: {text}. "
-            f"Dermatological examination and skin assessment recommended."
-        )
-    elif detected == "Gastroenterology":
-        enhanced = (
-            f"Patient presents with gastrointestinal symptoms: {text}. "
-            f"Gastroenterological evaluation of digestive system recommended."
-        )
-    elif detected == "Pulmonology":
-        enhanced = (
-            f"Patient presents with respiratory symptoms: {text}. "
-            f"Pulmonological assessment of lungs and airways recommended."
-        )
-    elif detected == "Nephrology":
-        enhanced = (
-            f"Patient presents with renal symptoms: {text}. "
-            f"Nephrological evaluation of kidney function recommended."
-        )
-    elif detected == "Pediatrics":
-        enhanced = (
-            f"Pediatric patient presents with: {text}. "
-            f"Child health assessment and pediatric evaluation recommended."
-        )
-    elif detected == "Oncology":
-        enhanced = (
-            f"Patient presents with oncological concerns: {text}. "
-            f"Cancer screening and oncological evaluation recommended."
-        )
+    templates = {
+        "General Medicine":   f"Patient presents with general medical complaints including {text}. Symptoms suggest primary care consultation. Clinical assessment for common illness, fever, infection or viral condition. General medicine outpatient evaluation recommended.",
+        "Cardiology":         f"Patient presents with cardiovascular symptoms: {text}. Cardiac evaluation recommended including ECG and blood pressure monitoring.",
+        "Neurology":          f"Patient presents with neurological symptoms: {text}. Neurological assessment of brain and nervous system recommended.",
+        "Orthopedics":        f"Patient presents with musculoskeletal complaints: {text}. Orthopedic evaluation of bones and joints recommended.",
+        "Dermatology":        f"Patient presents with skin-related symptoms: {text}. Dermatological examination recommended.",
+        "Gastroenterology":   f"Patient presents with gastrointestinal symptoms: {text}. Gastroenterological evaluation recommended.",
+        "Pulmonology":        f"Patient presents with respiratory symptoms: {text}. Pulmonological assessment of lungs recommended.",
+        "Nephrology":         f"Patient presents with renal symptoms: {text}. Nephrological evaluation of kidney function recommended.",
+        "Pediatrics":         f"Pediatric patient presents with: {text}. Child health assessment recommended.",
+        "Oncology":           f"Patient presents with oncological concerns: {text}. Cancer screening and evaluation recommended.",
+    }
+    if detected and detected in templates:
+        enhanced = templates[detected]
     else:
-        # Default — General Medicine
-        enhanced = (
-            f"Patient presents with the following symptoms and complaints: {text}. "
-            f"General medical assessment required for diagnosis and treatment plan. "
-            f"Primary care physician consultation recommended."
-        )
-
+        enhanced = f"Patient presents with the following symptoms: {text}. General medical assessment required for diagnosis and treatment."
     print(f"✅ Text enhanced: {len(words)} words → clinical format")
     return enhanced
 
 # ── Prediction ───────────────────────────────────────────────
 def predict(text):
-    """Run prediction on input text"""
-    # Enhance short/casual text
     text = enhance_text(text)
-
     if classifier_model is None or tokenizer is None:
         import random
         probs   = [random.random() for _ in SPECIALTIES]
@@ -246,7 +187,6 @@ def predict(text):
             "confidence": round(max(probs) * 100, 1),
             "all_probs":  {s: round(p * 100, 1) for s, p in zip(SPECIALTIES, probs)}
         }
-
     enc = tokenizer(
         str(text), max_length=256,
         padding="max_length", truncation=True,
@@ -255,7 +195,6 @@ def predict(text):
     with torch.no_grad():
         out   = classifier_model(**enc)
         probs = F.softmax(out.logits, dim=1).squeeze().numpy()
-
     top_idx = int(probs.argmax())
     return {
         "specialty":  SPECIALTIES[top_idx],
@@ -265,7 +204,6 @@ def predict(text):
 
 # ── File Extraction ──────────────────────────────────────────
 def extract_text_from_pdf(filepath):
-    """Extract text from PDF using PyMuPDF"""
     try:
         import fitz
         doc  = fitz.open(filepath)
@@ -278,12 +216,16 @@ def extract_text_from_pdf(filepath):
         return ""
 
 def extract_text_from_image(filepath):
-    """Extract text from image using Tesseract OCR"""
     try:
         import pytesseract
         from PIL import Image
-        pytesseract.pytesseract.tesseract_cmd = \
-            r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+        # ✅ Cross-platform Tesseract path
+        if platform.system() == "Windows":
+            pytesseract.pytesseract.tesseract_cmd = \
+                r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+        # Linux (Railway/Render) uses default path automatically
+
         img  = Image.open(filepath)
         text = pytesseract.image_to_string(img)
         print(f"✅ OCR extracted: {len(text)} characters")
@@ -447,10 +389,8 @@ def classify():
         flash("Please enter valid text.", "warning")
         return redirect(url_for("classify_page"))
 
-    # Predict (enhancement happens inside predict)
     result = predict(text)
-
-    clf = Classification(
+    clf    = Classification(
         user_id    = session["user_id"],
         input_text = text[:1000],
         specialty  = result["specialty"],
