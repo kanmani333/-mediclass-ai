@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+<div class="auth-container fade-in">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <div class="brand-logo">M</div>
+      <h1>Medi<span>Class</span> AI</h1>
+    </div>
+    <h2>AI-Powered Medical<br><em>Report Classifier</em></h2>
+    <p>Classify medical reports into 10 specialties with 98% accuracy using fine-tuned BioBERT technology.</p>
+    <div class="auth-features">
+      <span class="feature-chip">❤️ Cardiology</span>
+      <span class="feature-chip">🧠 Neurology</span>
+      <span class="feature-chip">🔬 Oncology</span>
+      <span class="feature-chip">🦴 Orthopedics</span>
+      <span class="feature-chip">🩺 Dermatology</span>
+      <span class="feature-chip">🫁 Gastroenterology</span>
+      <span class="feature-chip">💨 Pulmonology</span>
+      <span class="feature-chip">🫘 Nephrology</span>
+      <span class="feature-chip">👶 Pediatrics</span>
+      <span class="feature-chip">🏥 General Medicine</span>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-card">
+      <h3>Welcome Back</h3>
+      <p class="auth-sub">Sign in to your secure medical account</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST" action="/login">
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="doctor@hospital.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn-gold" style="width:100%;justify-content:center;">Sign In →</button>
+      </form>
+      <div class="auth-divider"><span>New to MediClass AI?</span></div>
+      <a href="/register" class="btn-outline" style="width:100%;justify-content:center;margin-bottom:16px;">Create Account</a>
+      <div class="auth-note">🔒 All medical data is encrypted and confidential</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

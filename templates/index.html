@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="/home" class="nav-brand">
+    <div class="brand-logo">M</div>
+    <span class="brand-name">Medi<span>Class</span> AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="/home" class="active">🏠 Home</a>
+    <a href="/classify_page">📄 Classify Report</a>
+    <a href="/history">📋 Patient History</a>
+    {% if session.user_role == 'admin' %}
+    <a href="/admin">⚙️ Analytics</a>
+    {% endif %}
+  </div>
+  <div class="nav-user">
+    <div class="user-avatar">{{ user.name[0].upper() }}</div>
+    <div>
+      <div class="user-name">{{ user.name }}</div>
+      <span class="role-badge role-{{ user.role }}">{{ user.role }}</span>
+    </div>
+    <a href="/logout" class="logout-btn">Logout</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} fade-in">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Welcome Banner -->
+  <div class="welcome-banner fade-in">
+    <div>
+      <h2>Welcome to <em>MediClass AI</em> 👋</h2>
+      <p>Hello, {{ user.name }}! Ready to classify medical reports with 98% accuracy.</p>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px;">Model Accuracy</div>
+      <div style="font-family:'Playfair Display',serif;font-size:36px;color:var(--gold);font-weight:700;">98.07%</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card fade-in">
+      <div class="stat-icon">📊</div>
+      <div class="stat-value">{{ total_classifications }}</div>
+      <div class="stat-label">Total Reports</div>
+    </div>
+    <div class="stat-card fade-in">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value">98%</div>
+      <div class="stat-label">Accuracy</div>
+    </div>
+    <div class="stat-card fade-in">
+      <div class="stat-icon">🏥</div>
+      <div class="stat-value">10</div>
+      <div class="stat-label">Specialties</div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="section-header">
+    <h3>Quick Actions</h3>
+  </div>
+  <div class="actions-grid">
+    <a href="/classify_page" class="action-card fade-in">
+      <span class="action-icon">📝</span>
+      <div class="action-title">Type Report Text</div>
+      <div class="action-desc">Paste or type medical symptoms and reports for instant classification</div>
+    </a>
+    <a href="/classify_page#upload" class="action-card fade-in">
+      <span class="action-icon">📄</span>
+      <div class="action-title">Upload Report</div>
+      <div class="action-desc">Upload PDF or image files for automatic text extraction and classification</div>
+    </a>
+    <a href="/history" class="action-card fade-in">
+      <span class="action-icon">📋</span>
+      <div class="action-title">View History</div>
+      <div class="action-desc">Browse past classifications, search by patient, filter by specialty</div>
+    </a>
+  </div>
+
+  <!-- Recent Classifications -->
+  {% if recent %}
+  <div class="section-header">
+    <h3>Recent Classifications</h3>
+    <a href="/history" class="view-all">View all →</a>
+  </div>
+  <div class="recent-grid">
+    {% for r in recent %}
+    <div class="recent-card fade-in">
+      <div class="recent-icon">{{ specialty_icons[r.specialty] }}</div>
+      <div class="recent-info">
+        <strong>{{ r.specialty }}</strong>
+        <span>{{ r.confidence }}% confidence</span>
+        <small>{{ r.created_at.strftime('%d %b %Y') }}</small>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</main>
+
+</body>
+</html>

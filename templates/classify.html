@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Classify Report</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="/home" class="nav-brand">
+    <div class="brand-logo">M</div>
+    <span class="brand-name">Medi<span>Class</span> AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="/home">🏠 Home</a>
+    <a href="/classify_page" class="active">📄 Classify Report</a>
+    <a href="/history">📋 Patient History</a>
+    {% if session.user_role == 'admin' %}<a href="/admin">⚙️ Analytics</a>{% endif %}
+  </div>
+  <div class="nav-user">
+    <div class="user-avatar">{{ session.user_name[0].upper() }}</div>
+    <div class="user-name">{{ session.user_name }}</div>
+    <a href="/logout" class="logout-btn">Logout</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header fade-in">
+    <h2>📄 Classify Medical Report</h2>
+    <p>Enter symptoms or upload a PDF report for AI-powered specialty classification</p>
+    <div class="gold-line"></div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="classify-section">
+    <!-- Text Input -->
+    <div class="card card-gold fade-in">
+      <div class="section-header">
+        <h3>📝 Text Input</h3>
+        <span style="font-size:12px;color:var(--text-muted);">Paste or type report</span>
+      </div>
+      <form method="POST" action="/classify" id="textForm">
+        <input type="hidden" name="input_type" value="text">
+        <textarea name="text" id="symptomText"
+          placeholder="Paste or type medical report here…&#10;&#10;e.g. 58-year-old male presents with crushing chest pain radiating to the left arm, diaphoresis, and shortness of breath for the past 2 hours. ECG shows ST elevation in leads II, III, aVF..."
+          rows="8"></textarea>
+
+        <div class="examples-row">
+          <span>Examples:</span>
+          <button type="button" class="ex-btn" onclick="fillExample(0)">❤️ Chest Pain</button>
+          <button type="button" class="ex-btn" onclick="fillExample(1)">🧠 Headache</button>
+          <button type="button" class="ex-btn" onclick="fillExample(2)">🔬 Oncology</button>
+          <button type="button" class="ex-btn" onclick="fillExample(3)">🦴 Knee Pain</button>
+          <button type="button" class="ex-btn" onclick="fillExample(4)">💨 Breathing</button>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px;align-items:center;">
+          <button type="submit" class="btn-gold">🔍 Classify Report</button>
+          <button type="button" class="btn-ghost" onclick="document.getElementById('symptomText').value=''">Clear</button>
+          <div style="margin-left:auto;font-size:12px;background:rgba(46,204,113,0.1);color:#2ECC71;padding:6px 14px;border-radius:20px;border:1px solid rgba(46,204,113,0.2);">~98% Accuracy</div>
+        </div>
+      </form>
+    </div>
+
+    <!-- PDF Upload -->
+    <div class="card card-gold fade-in" id="upload">
+      <div class="section-header">
+        <h3>📄 Upload Report</h3>
+        <span style="font-size:12px;color:var(--text-muted);">PDF, JPG, PNG</span>
+      </div>
+      <form method="POST" action="/classify" enctype="multipart/form-data" id="pdfForm">
+        <input type="hidden" name="input_type" value="pdf">
+        <div class="upload-zone" id="uploadZone"
+             ondragover="event.preventDefault();this.style.borderColor='var(--gold)'"
+             ondragleave="this.style.borderColor=''"
+             ondrop="handleDrop(event)">
+          <div class="upload-icon">📄</div>
+          <p>Drag & drop medical report here</p>
+          <span style="font-size:12px;color:var(--text-muted);">or</span>
+          <label class="upload-label">
+            Browse File
+            <input type="file" name="pdf_file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png" onchange="showFile(this)">
+          </label>
+          <div class="file-name" id="fileName"></div>
+          <div id="filePreview" style="display:none;margin-top:12px;">
+            <img id="previewImg" style="max-width:200px;max-height:150px;border-radius:8px;border:1px solid var(--border);">
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin:12px 0;padding:10px;background:rgba(212,175,55,0.05);border-radius:8px;">
+          ✅ Supports: PDF · JPG · JPEG · PNG<br>
+          ✅ Text extracted automatically
+        </div>
+        <button type="submit" class="btn-gold" id="uploadBtn" disabled>📤 Upload & Classify</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Specialties Reference -->
+  <div class="card fade-in">
+    <div class="section-header">
+      <h3>🏥 Supported Specialties</h3>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      {% for specialty, icon in specialty_icons.items() %}
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:rgba(212,175,55,0.05);border:1px solid var(--border);border-radius:10px;font-size:13px;">
+        <span>{{ icon }}</span>
+        <span style="color:var(--text);">{{ specialty }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+
+<script>
+const examples = [
+  "58-year-old male presents with crushing chest pain radiating to the left arm, diaphoresis, and shortness of breath for the past 2 hours. ECG shows ST elevation in leads II, III, aVF. History of hypertension and diabetes.",
+  "35-year-old female with sudden onset severe headache described as worst headache of her life, neck stiffness, photophobia and mild fever. No prior similar episodes. CT head normal.",
+  "62-year-old smoker with unexplained 10kg weight loss over 3 months, persistent fatigue, night sweats and palpable supraclavicular lymph node. No fever.",
+  "45-year-old athlete with right knee pain and swelling after sudden twisting injury during football. McMurray test positive. Unable to bear full weight. MRI ordered.",
+  "55-year-old with progressive dyspnea on exertion, chronic productive cough and FEV1/FVC ratio 0.60 on spirometry. 30 pack-year smoking history. No fever."
+];
+
+function fillExample(i) {
+  document.getElementById('symptomText').value = examples[i];
+}
+
+function showFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('fileName').textContent = '📎 ' + file.name;
+  document.getElementById('uploadBtn').disabled = false;
+  if (file.type.startsWith('image/')) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      document.getElementById('previewImg').src = e.target.result;
+      document.getElementById('filePreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('fileInput').files = dt.files;
+    showFile(document.getElementById('fileInput'));
+  }
+  document.getElementById('uploadZone').style.borderColor = '';
+}
+</script>
+</body>
+</html>
+

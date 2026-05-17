@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Register</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+<div class="auth-container fade-in">
+  <div class="auth-left">
+    <div class="auth-brand">
+      <div class="brand-logo">M</div>
+      <h1>Medi<span>Class</span> AI</h1>
+    </div>
+    <h2>Join the Secure<br><em>Medical Platform</em></h2>
+    <p>Create your account to start classifying medical reports with our 98% accuracy AI model.</p>
+    <div class="role-info">
+      <div class="role-card">
+        <span class="role-icon">👨‍⚕️</span>
+        <div>
+          <strong>Doctor</strong>
+          <p>Classify reports, view patient history</p>
+        </div>
+      </div>
+      <div class="role-card">
+        <span class="role-icon">🧑‍💼</span>
+        <div>
+          <strong>Patient</strong>
+          <p>Submit symptoms, track your results</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="auth-right">
+    <div class="auth-card">
+      <h3>Create Account</h3>
+      <p class="auth-sub">Fill in your details to get started</p>
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endwith %}
+      <form method="POST" action="/register">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" name="name" placeholder="Dr. John Smith" required>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" name="email" placeholder="doctor@hospital.com" required>
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select name="role">
+            <option value="doctor">👨‍⚕️ Doctor</option>
+            <option value="patient">🧑‍💼 Patient</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="Min. 8 characters" required>
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" name="confirm_password" placeholder="Re-enter password" required>
+        </div>
+        <button type="submit" class="btn-gold" style="width:100%;justify-content:center;">Create Account →</button>
+      </form>
+      <div class="auth-divider"><span>Already have an account?</span></div>
+      <a href="/login" class="btn-outline" style="width:100%;justify-content:center;margin-bottom:16px;">Sign In</a>
+      <div class="auth-note">🔒 Your data is protected and never shared</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

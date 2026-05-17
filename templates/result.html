@@ -1,0 +1,82 @@
+<!-- result.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Result</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="/home" class="nav-brand">
+    <div class="brand-logo">M</div>
+    <span class="brand-name">Medi<span>Class</span> AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="/home">🏠 Home</a>
+    <a href="/classify_page">📄 Classify Report</a>
+    <a href="/history" class="active">📋 Patient History</a>
+    {% if session.user_role == 'admin' %}<a href="/admin">⚙️ Analytics</a>{% endif %}
+  </div>
+  <div class="nav-user">
+    <div class="user-avatar">{{ session.user_name[0].upper() }}</div>
+    <div class="user-name">{{ session.user_name }}</div>
+    <a href="/logout" class="logout-btn">Logout</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <!-- Primary Result -->
+  <div class="result-hero fade-in">
+    <div class="result-icon-big">{{ specialty_icons[result.specialty] }}</div>
+    <div style="flex:1;">
+      <div class="result-label">Primary Classification</div>
+      <div class="result-specialty">{{ result.specialty }}</div>
+      <div class="confidence-wrap">
+        <div class="confidence-bar-bg">
+          <div class="confidence-bar-fill" style="width:{{ result.confidence }}%"></div>
+        </div>
+        <div class="confidence-text">{{ result.confidence }}% Confidence</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <a href="/classify_page" class="btn-gold">+ New Classification</a>
+      <a href="/history" class="btn-outline">View History</a>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <!-- Input Summary -->
+    <div class="card fade-in">
+      <h4 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:14px;">📝 Input Summary</h4>
+      <p style="font-size:14px;color:var(--text-muted);line-height:1.7;">{{ input_text }}{% if input_text|length >= 300 %}...{% endif %}</p>
+    </div>
+
+    <!-- Probability Breakdown -->
+    <div class="card fade-in">
+      <h4 style="font-family:'Playfair Display',serif;font-size:16px;color:var(--gold);margin-bottom:14px;">📊 Specialty Probabilities</h4>
+      <div class="probs-list">
+        {% for specialty, prob in result.all_probs.items()|sort(attribute='1', reverse=True) %}
+        <div class="prob-row {% if specialty == result.specialty %}top-result{% endif %}">
+          <div class="prob-label">
+            <span>{{ specialty_icons[specialty] }}</span>
+            <span style="font-size:13px;">{{ specialty }}</span>
+          </div>
+          <div class="prob-track">
+            <div class="prob-fill" style="width:{{ prob }}%"></div>
+          </div>
+          <div class="prob-pct">{{ prob }}%</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="disclaimer fade-in">
+    ⚠️ This AI classification is for assistive purposes only. Always consult a qualified medical professional for diagnosis and treatment decisions.
+  </div>
+</main>
+</body>
+</html>

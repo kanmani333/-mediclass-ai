@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+database/
+uploads/
+*.db
+.env
+*.log
+model/best_model/model.safetensors

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediClass AI — Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <a href="/home" class="nav-brand">
+    <div class="brand-logo">M</div>
+    <span class="brand-name">Medi<span>Class</span> AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="/home">🏠 Home</a>
+    <a href="/classify_page">📄 Classify Report</a>
+    <a href="/history">📋 Patient History</a>
+    <a href="/admin" class="active">⚙️ Analytics</a>
+  </div>
+  <div class="nav-user">
+    <div class="user-avatar">A</div>
+    <div>
+      <div class="user-name">Admin</div>
+      <span class="role-badge role-admin">Admin</span>
+    </div>
+    <a href="/logout" class="logout-btn">Logout</a>
+  </div>
+</nav>
+
+<main class="main-content">
+  <div class="page-header fade-in">
+    <h2>⚙️ Admin Analytics</h2>
+    <p>Platform overview and user management</p>
+    <div class="gold-line"></div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- Stats -->
+  <div class="admin-grid">
+    <div class="stat-card fade-in">
+      <div class="stat-icon">👥</div>
+      <div class="stat-value">{{ users|length }}</div>
+      <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card fade-in">
+      <div class="stat-icon">📊</div>
+      <div class="stat-value">{{ total_c }}</div>
+      <div class="stat-label">Total Reports</div>
+    </div>
+    <div class="stat-card fade-in">
+      <div class="stat-icon">🎯</div>
+      <div class="stat-value">98%</div>
+      <div class="stat-label">Accuracy</div>
+    </div>
+    <div class="stat-card fade-in">
+      <div class="stat-icon">🏥</div>
+      <div class="stat-value">10</div>
+      <div class="stat-label">Specialties</div>
+    </div>
+  </div>
+
+  <!-- User Management -->
+  <div class="section-header fade-in">
+    <h3>👥 User Management</h3>
+  </div>
+  <div class="users-table-wrap fade-in">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Joined</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td style="color:var(--text-muted);">{{ loop.index }}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div class="user-avatar" style="width:30px;height:30px;font-size:12px;">{{ u.name[0].upper() }}</div>
+              {{ u.name }}
+            </div>
+          </td>
+          <td style="color:var(--text-muted);font-size:13px;">{{ u.email }}</td>
+          <td><span class="role-badge role-{{ u.role }}">{{ u.role }}</span></td>
+          <td>
+            <span style="font-size:12px;padding:3px 10px;border-radius:4px;
+              {% if u.is_active %}background:rgba(46,204,113,0.1);color:#2ECC71;
+              {% else %}background:rgba(231,76,60,0.1);color:#E74C3C;{% endif %}">
+              {{ '✅ Active' if u.is_active else '❌ Inactive' }}
+            </span>
+          </td>
+          <td style="color:var(--text-muted);font-size:13px;">{{ u.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            <div class="action-btns">
+              {% if u.role != 'admin' %}
+              <a href="/admin/toggle_user/{{ u.id }}" class="btn-sm {% if u.is_active %}btn-sm-danger{% else %}btn-sm-success{% endif %}">
+                {{ 'Deactivate' if u.is_active else 'Activate' }}
+              </a>
+              <a href="/admin/change_role/{{ u.id }}/{% if u.role == 'doctor' %}patient{% else %}doctor{% endif %}"
+                 class="btn-sm btn-sm-gold">
+                → {{ 'Patient' if u.role == 'doctor' else 'Doctor' }}
+              </a>
+              {% else %}
+              <span style="font-size:12px;color:var(--text-muted);">Super Admin</span>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Recent Activity -->
+  {% if recent %}
+  <div class="section-header fade-in">
+    <h3>📊 Recent Activity</h3>
+    <a href="/history" class="view-all">View all →</a>
+  </div>
+  <div class="history-table-wrap fade-in">
+    <table class="history-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Specialty</th>
+          <th>Confidence</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in recent %}
+        <tr>
+          <td>{{ r.user.name }}</td>
+          <td><span class="specialty-tag">{{ specialty_icons[r.specialty] }} {{ r.specialty }}</span></td>
+          <td><span class="conf-badge {% if r.confidence >= 85 %}high{% elif r.confidence >= 65 %}medium{% else %}low{% endif %}">{{ r.confidence }}%</span></td>
+          <td style="color:var(--text-muted);font-size:13px;">{{ r.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</main>
+</body>
+</html>
