@@ -13,9 +13,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from functools import wraps
 from datetime import datetime
-import os, json, torch, platform
+import os, json, platform
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 # ── Paths ────────────────────────────────────────────────────
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
@@ -128,14 +127,35 @@ tokenizer        = None
 
 def load_model():
     global classifier_model, tokenizer
-    if os.path.exists(MDL_PATH):
+    try:
+        # Check if model folder exists
+        if not os.path.exists(MDL_PATH):
+            print("⚠️  Model folder not found — running in demo mode")
+            return
+
+        # Check if model weight files exist
+        safetensors_file = os.path.join(MDL_PATH, "model.safetensors")
+        pytorch_bin_file = os.path.join(MDL_PATH, "pytorch_model.bin")
+
+        if not os.path.exists(safetensors_file) and \
+           not os.path.exists(pytorch_bin_file):
+            print("⚠️  Model weights not found — running in demo mode")
+            return
+
+        # Load model
+        import torch
+        from transformers import AutoTokenizer, AutoModelForSequenceClassification
         print("🤖 Loading BioBERT model...")
         tokenizer        = AutoTokenizer.from_pretrained(MDL_PATH)
         classifier_model = AutoModelForSequenceClassification.from_pretrained(MDL_PATH)
         classifier_model.eval()
         print("✅ Model loaded successfully!")
-    else:
-        print("⚠️  Model not found — running in demo mode")
+
+    except Exception as e:
+        print(f"⚠️  Model loading failed: {e}")
+        print("⚠️  Running in demo mode")
+        classifier_model = None
+        tokenizer        = None
 
 # ── Text Enhancer ────────────────────────────────────────────
 def detect_specialty_from_keywords(text):
@@ -173,17 +193,32 @@ def enhance_text(text):
 # ── Prediction ───────────────────────────────────────────────
 def predict(text):
     text = enhance_text(text)
+
+    # Demo mode — smart keyword-based prediction
     if classifier_model is None or tokenizer is None:
+        detected = detect_specialty_from_keywords(text)
+        specialty = detected if detected else "General Medicine"
+
+        # Build probability distribution
         import random
-        probs   = [random.random() for _ in SPECIALTIES]
-        total   = sum(probs)
-        probs   = [p / total for p in probs]
-        top_idx = probs.index(max(probs))
+        probs = [0.01] * len(SPECIALTIES)
+        top_idx = SPECIALTIES.index(specialty)
+        probs[top_idx] = 0.85 + random.uniform(0, 0.10)
+
+        # Distribute remaining probability
+        remaining = 1.0 - probs[top_idx]
+        other_indices = [i for i in range(len(SPECIALTIES)) if i != top_idx]
+        for i in other_indices:
+            probs[i] = remaining / len(other_indices)
+
         return {
-            "specialty":  SPECIALTIES[top_idx],
-            "confidence": round(max(probs) * 100, 1),
+            "specialty":  specialty,
+            "confidence": round(probs[top_idx] * 100, 1),
             "all_probs":  {s: round(p * 100, 1) for s, p in zip(SPECIALTIES, probs)}
         }
+
+    # Real model prediction
+    import torch
     enc = tokenizer(
         str(text), max_length=256,
         padding="max_length", truncation=True,
@@ -492,7 +527,7 @@ with app.app_context():
     except Exception as e:
         print(f"❌ Database error: {e}")
 
-# ── Load Model ───────────────────────────────────────────────
+# ── Load Model Safely ────────────────────────────────────────
 load_model()
 
 # ── Run ──────────────────────────────────────────────────────
