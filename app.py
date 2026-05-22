@@ -28,7 +28,7 @@ os.makedirs(UPL_PATH, exist_ok=True)
 
 # ── App Config ───────────────────────────────────────────────
 app = Flask(__name__)
-app.secret_key = "mediclass-ai-secret-2024"
+app.secret_key = os.environ.get("SECRET_KEY", "mediclass-ai-secret-2024")
 app.config["SQLALCHEMY_DATABASE_URI"]        = f"sqlite:///{DB_PATH}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["UPLOAD_FOLDER"]                  = UPL_PATH
@@ -153,7 +153,7 @@ def enhance_text(text):
     words    = text.split()
     if len(words) >= 20:
         return text
-    detected = detect_specialty_from_keywords(text)
+    detected  = detect_specialty_from_keywords(text)
     templates = {
         "General Medicine":   f"Patient presents with general medical complaints including {text}. Symptoms suggest primary care consultation. Clinical assessment for common illness, fever, infection or viral condition. General medicine outpatient evaluation recommended.",
         "Cardiology":         f"Patient presents with cardiovascular symptoms: {text}. Cardiac evaluation recommended including ECG and blood pressure monitoring.",
@@ -167,11 +167,8 @@ def enhance_text(text):
         "Oncology":           f"Patient presents with oncological concerns: {text}. Cancer screening and evaluation recommended.",
     }
     if detected and detected in templates:
-        enhanced = templates[detected]
-    else:
-        enhanced = f"Patient presents with the following symptoms: {text}. General medical assessment required for diagnosis and treatment."
-    print(f"✅ Text enhanced: {len(words)} words → clinical format")
-    return enhanced
+        return templates[detected]
+    return f"Patient presents with the following symptoms: {text}. General medical assessment required for diagnosis and treatment."
 
 # ── Prediction ───────────────────────────────────────────────
 def predict(text):
@@ -219,13 +216,9 @@ def extract_text_from_image(filepath):
     try:
         import pytesseract
         from PIL import Image
-
-        # ✅ Cross-platform Tesseract path
         if platform.system() == "Windows":
             pytesseract.pytesseract.tesseract_cmd = \
                 r'C:\Program Files\Tesseract-OCR\tesseract.exe'
-        # Linux (Railway/Render) uses default path automatically
-
         img  = Image.open(filepath)
         text = pytesseract.image_to_string(img)
         print(f"✅ OCR extracted: {len(text)} characters")
@@ -477,11 +470,11 @@ def api_classify():
     result = predict(text)
     return jsonify(result)
 
-# ── Init & Run ───────────────────────────────────────────────
-def create_admin():
-    with app.app_context():
+# ── Initialize Database on Startup ──────────────────────────
+with app.app_context():
+    try:
         db.create_all()
-        print(f"✅ Database ready: {DB_PATH}")
+        print("✅ Database tables created!")
         if not User.query.filter_by(role="admin").first():
             admin_user = User(
                 name     = "Admin",
@@ -494,12 +487,19 @@ def create_admin():
             print("✅ Admin account created!")
             print("   Email   : admin@mediclass.com")
             print("   Password: Admin@123")
+        else:
+            print("✅ Admin already exists!")
+    except Exception as e:
+        print(f"❌ Database error: {e}")
 
+# ── Load Model ───────────────────────────────────────────────
+load_model()
+
+# ── Run ──────────────────────────────────────────────────────
 if __name__ == "__main__":
-    create_admin()
-    load_model()
+    port = int(os.environ.get("PORT", 5000))
     print("\n" + "="*50)
     print("🚀 MediClass AI is running!")
-    print("   Open: http://127.0.0.1:5000")
+    print(f"   Open: http://127.0.0.1:{port}")
     print("="*50 + "\n")
-    app.run(debug=True, port=5000)
+    app.run(debug=False, host="0.0.0.0", port=port)
