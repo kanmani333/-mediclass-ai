@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -17,7 +18,10 @@ WORKDIR /app
 # Copy requirements first
 COPY requirements.txt .
 
-# Install Python packages
+# Install gunicorn first separately
+RUN pip install --no-cache-dir gunicorn==21.2.0
+
+# Install all other packages
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy all project files
